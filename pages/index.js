@@ -1,52 +1,110 @@
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
+import axios from "axios";
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const [tok, setTok] = useState();
+  const [exp, setExp] = useState();
+  const [zip, setZip] = useState();
+  const [stores, setStores] = useState([]);
+  const [items, setItems] = useState([])
+
+  useEffect(() => {
+    const bin = btoa(`${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`)
+  
+    let config = {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${bin}`, 
+      }
+      }
+    
+      axios
+        .post('https://api-ce.kroger.com/v1/connect/oauth2/token?scope=product.compact', "grant_type=client_credentials", config)
+        .then(res => {
+          // console.log(res.data)
+          setTok(res.data.access_token)
+          setExp(res.data.expires_in)
+        })
+        .catch(err => err.message)
+  },[])
+  
+  const handleFetch = () => {
+  
+    let config2 = {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${tok}`
+      }
+      }
+  
+    // axios
+    // .get(`https://api-ce.kroger.com/v1/locations?filter.zipCode.near=${zip}`, config2)
+    // .then(res => {
+    //   console.log(res.data.data);
+    //   let stores = res.data.data.filter(kr => kr.chain !== "SHELL COMPANY" && kr.chain !== "THE LITTLE CLINIC");
+    //   setStores(stores);
+    //   console.log(exp);
+    // })
+    // .catch(err => err.message)
+
+    axios
+    .get(`https://api-ce.kroger.com/v1/products?filter.term=beyond&filter.locationId=02500402`, config2)
+    .then(res => {
+      console.log(res.data.data);
+      let stores = res.data.data.filter(item => item.categories[0] !== "Pet Care" && item.categories[0] !== "Gift Cards");
+      setItems(stores);
+    })
+    .catch(err => err.message)
+  }
+
+  const handleZipChange = e => {
+    setZip(e.target.value);
+  }
+
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
+        <title>Plant Based Promos</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.main}>
         <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
+         Plant Based Promos
         </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
+        <p className={styles.description}>A hub for local low-priced plant based groceries</p>
 
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          <div>
+            <label>Enter Zip Code</label>
+            <input
+            type="text"
+            placeholder="Zip Code"
+            name="zip"
+            onChange={handleZipChange}
+            />
+          </div>
+         <button onClick={handleFetch}>Search</button>
+        </div>
+        <div className={styles.grid}>
+          {/* {stores.map(store => (
+            <div className={styles.card}>
+            <h4>{store.chain}</h4>
+            <p>{store.address.addressLine1}</p>
+            </div>
+          ))} */}
+        </div>
+        <div className={styles.grid}>
+          {items.map(item => (
+            <div className={styles.card}>
+            <h4>{item.brand}</h4>
+            <p>{item.description}</p>
+            {/* <img alt={item.description} src={item.images[0].sizes[0].url} /> */}
+            <p>{item.price ? item.price.price : "No price available"}</p>
+            </div>
+          ))}
         </div>
       </main>
 
